@@ -1,5 +1,5 @@
 {
-  "external-dns-secret": "1b5196da147c517a418d2ca8ab47782f9402d486a9b4bfd13f47c387734fec35",
+  "external-dns-secret": "b134f0a7a1c6d7108879a46370ba6c6646fd8ce8e0bea5dbe302721baf75175e",
   "git-sync-credentials-secret": "e3165255472c78571d22be1b5b34bbb865df113a2b48905fea7dcbdea3568654",
   "postgresql-connection-string-secret": "3ef476a2c813aa11521d4ceb017cb6d64e3fe333161035eb0b4da5e8d3c874eb",
   "airflow-fernet-key-secret": "943a021a9da751523b64be7906fec0a9a91fe480256aa2246ff45235fbdc655d",

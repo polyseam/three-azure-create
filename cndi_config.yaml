@@ -9,7 +9,7 @@ infrastructure:
       provider: azure
       values:
         azure:
-          resourceGroup: domain-names-rg
+          resourceGroup: domain-name-rg
     cert_manager:
       email: matt.johnston@polyseam.io
     nodes:
