@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg
+  labels:
+    name: cnpg
+spec:
+  project: default
+  source:
+    repoURL: 'https://cloudnative-pg.github.io/charts'
+    chart: cloudnative-pg
+    targetRevision: 0.23.0
+    helm:
+      version: v3
+      values: |
+        {}
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Validate=false
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=false
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 4m

@@ -1,0 +1,35 @@
+{
+  "provider": {
+    "helm": [
+      {
+        "kubernetes": {
+          "host": "${module.cndi_azurerm_aks_module.host}",
+          "client_certificate": "${base64decode(module.cndi_azurerm_aks_module.client_certificate)}",
+          "client_key": "${base64decode(module.cndi_azurerm_aks_module.client_key)}",
+          "cluster_ca_certificate": "${base64decode(module.cndi_azurerm_aks_module.cluster_ca_certificate)}"
+        }
+      }
+    ],
+    "kubernetes": [
+      {
+        "host": "${module.cndi_azurerm_aks_module.host}",
+        "client_certificate": "${base64decode(module.cndi_azurerm_aks_module.client_certificate)}",
+        "client_key": "${base64decode(module.cndi_azurerm_aks_module.client_key)}",
+        "cluster_ca_certificate": "${base64decode(module.cndi_azurerm_aks_module.cluster_ca_certificate)}"
+      }
+    ],
+    "time": [
+      {}
+    ],
+    "tls": [
+      {}
+    ],
+    "azurerm": [
+      {
+        "features": [
+          {}
+        ]
+      }
+    ]
+  }
+}

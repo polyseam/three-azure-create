@@ -1,0 +1,14 @@
+{
+  "locals": {
+    "cndi_project_name": "three-azure-create",
+    "region": "eastus",
+    "availability_zones": [
+      "1",
+      "2",
+      "3"
+    ],
+    "network_address_space": "10.0.0.0/16",
+    "private_subnet_address_spaces": "${[for k, v in local.availability_zones : cidrsubnet(local.network_address_space, 4, k + length(local.availability_zones))]}",
+    "public_subnet_address_spaces": "${[for k, v in local.availability_zones : cidrsubnet(local.network_address_space, 4, k)]}"
+  }
+}

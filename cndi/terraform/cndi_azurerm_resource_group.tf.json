@@ -1,0 +1,13 @@
+{
+  "resource": {
+    "azurerm_resource_group": {
+      "cndi_azurerm_resource_group": {
+        "location": "${local.cndi_arm_region}",
+        "name": "rg-cndi-${local.cndi_project_name}",
+        "tags": {
+          "CNDIProject": "${local.cndi_project_name}"
+        }
+      }
+    }
+  }
+}

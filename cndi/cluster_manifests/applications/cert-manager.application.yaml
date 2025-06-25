@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    name: cert-manager
+spec:
+  project: default
+  source:
+    repoURL: 'https://charts.jetstack.io'
+    chart: cert-manager
+    helm:
+      version: v3
+      values: |
+        installCRDs: true
+    targetRevision: 1.14.3
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cert-manager
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: cert-manager-webhook
+      jqPathExpressions:
+        - '.webhooks[].namespaceSelector.matchExpressions[] | select(.key == "control-plane")'
+        - '.webhooks[].namespaceSelector.matchExpressions[] | select(.key == "kubernetes.azure.com/managedby")'
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Validate=false
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=false
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 4m

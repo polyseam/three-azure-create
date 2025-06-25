@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: promtail
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    name: promtail
+spec:
+  project: default
+  source:
+    repoURL: 'https://grafana.github.io/helm-charts'
+    chart: promtail
+    helm:
+      version: v3
+      values: |
+        config:
+          clients:
+            - url: 'http://loki-gateway/loki/api/v1/push'
+              tenant_id: 1
+    targetRevision: 6.16.6
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Validate=false
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=false
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 4m

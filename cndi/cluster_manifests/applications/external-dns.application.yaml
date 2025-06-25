@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    name: external-dns
+  annotations:
+    argocd.argoproj.io/sync-wave: '-1'
+spec:
+  project: default
+  source:
+    repoURL: 'https://charts.bitnami.com/bitnami'
+    chart: external-dns
+    helm:
+      version: v3
+      values: |
+        txtOwnerId: three-azure-create
+        txtSuffix: txt
+        policy: sync
+        interval: 30s
+        provider: azure
+        domainFilters: []
+        excludeDomains:
+          - devmode.cndi.link
+        azure:
+          secretName: external-dns
+    targetRevision: 8.8.3
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Validate=false
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 4m

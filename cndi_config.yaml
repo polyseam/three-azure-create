@@ -1,0 +1,212 @@
+cndi_version: v3
+region: eastus
+project_name: three-azure-create
+provider: azure
+distribution: aks
+infrastructure:
+  cndi:
+    external_dns:
+      provider: azure
+      values:
+        azure:
+          resourceGroup: domain-names-rg
+    cert_manager:
+      email: matt.johnston@polyseam.io
+    nodes:
+      - name: xnodegroup
+        instance_type: Standard_D2s_v3
+        disk_size: 100
+        count: 3
+    observability:
+      grafana:
+        hostname: argocd.three-azure-create.coolnowdemoit.com
+    argocd:
+      hostname: argocd.three-azure-create.coolnowdemoit.com
+cluster_manifests:
+  external-dns-secret:
+    # External DNS Credentials
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: external-dns
+      namespace: external-dns
+    stringData:
+      azure.json: $cndi_on_ow.seal_secret_from_env_var(AZURE_CREDENTIALS)
+  # Airflow Credentials
+  git-sync-credentials-secret:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: airflow-git-credentials
+      namespace: airflow
+    stringData:
+      GIT_SYNC_USERNAME: $cndi_on_ow.seal_secret_from_env_var(GIT_USERNAME)
+      GIT_SYNC_PASSWORD: $cndi_on_ow.seal_secret_from_env_var(GIT_TOKEN)
+  postgresql-connection-string-secret:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: postgresql-connection-string-secret
+      namespace: airflow
+    type: Opaque
+    stringData:
+      connection: $cndi_on_ow.seal_secret_from_env_var(FQDN_POSTGRESQL_CONNECTION_STRING)
+  airflow-fernet-key-secret:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: airflow-fernet-key
+      namespace: airflow
+    type: Opaque
+    stringData:
+      fernet-key: $cndi_on_ow.seal_secret_from_env_var(AIRFLOW_FERNET_KEY)
+  airflow-webserver-key-secret:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: airflow-webserver-key
+      namespace: airflow
+    type: Opaque
+    stringData:
+      webserver-key: $cndi_on_ow.seal_secret_from_env_var(AIRFLOW_WEBSERVER_KEY)
+  cnpg-cluster:
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    metadata:
+      name: cnpg-airflow-cluster
+      namespace: airflow
+      annotations:
+        # PrunePropagationPolicy=background should prevent PDBs from blocking cluster destruction
+        argocd.argoproj.io/sync-options: 'SkipDryRunOnMissingResource=true,PrunePropagationPolicy=background'
+    spec:
+      imageName: 'ghcr.io/cloudnative-pg/postgresql:16'
+      instances: 3
+      storage:
+        size: 1Gi
+      replicationSlots:
+        highAvailability:
+          enabled: true
+      postgresql:
+        pg_hba:
+          - host airflow-db airflow all password
+      bootstrap:
+        initdb:
+          database: airflow-db
+          owner: airflow
+          secret:
+            name: cnpg-database-user-auth-secret
+      superuserSecret:
+        name: cnpg-cluster-superuser-auth-secret
+  cnpg-cluster-superuser-auth-secret:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: cnpg-cluster-superuser-auth-secret
+      namespace: airflow
+    type: kubernetes.io/basic-auth
+    stringData:
+      username: $cndi_on_ow.seal_secret_from_env_var(POSTGRESQL_CLUSTER_SUPERUSER)
+      password: $cndi_on_ow.seal_secret_from_env_var(POSTGRESQL_CLUSTER_SUPERUSER_PASSWORD)
+  cnpg-database-user-auth-secret:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: cnpg-database-user-auth-secret
+      namespace: airflow
+    type: kubernetes.io/basic-auth
+    stringData:
+      username: $cndi_on_ow.seal_secret_from_env_var(POSTGRESQL_USER)
+      password: $cndi_on_ow.seal_secret_from_env_var(POSTGRESQL_USER_PASSWORD)
+  airflow-ingress:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: airflow-ingress
+      namespace: airflow
+      annotations:
+        cert-manager.io/cluster-issuer: cluster-issuer
+        kubernetes.io/tls-acme: 'true'
+        external-dns.alpha.kubernetes.io/hostname: airflow.three-azure-create.coolnowdemoit.com
+    spec:
+      ingressClassName: public
+      tls:
+        - hosts:
+            - airflow.three-azure-create.coolnowdemoit.com
+          secretName: cluster-issuer-private-key-airflow
+      rules:
+        - host: airflow.three-azure-create.coolnowdemoit.com
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: airflow-webserver
+                    port:
+                      number: 8080
+  airflow-ns:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: airflow
+  cnpg-system-ns:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: cnpg-system
+applications:
+  cnpg:
+    targetRevision: 0.23.0
+    destinationNamespace: cnpg-system
+    repoURL: 'https://cloudnative-pg.github.io/charts'
+    chart: cloudnative-pg
+    syncPolicy:
+      syncOptions:
+        - ServerSideApply=true
+  airflow:
+    targetRevision: 1.11.0
+    destinationNamespace: airflow
+    repoURL: 'https://airflow.apache.org'
+    chart: airflow
+    values:
+      executor: LocalKubernetesExecutor
+      data:
+        metadataSecretName: postgresql-connection-string-secret
+      postgresql:
+        enabled: false
+      dags:
+        gitSync:
+          enabled: true
+          # Airflow DAG Repo URL
+          repo: 'https://github.com/johnstonmatt/three-azure-create'
+          credentialsSecret: airflow-git-credentials
+          branch: main
+          wait: 40
+          # Folder path in DAG repo to sync
+          subPath: dags
+      enableBuiltInSecretEnvVars:
+        AIRFLOW__CORE__FERNET_KEY: false
+        AIRFLOW__WEBSERVER__SECRET_KEY: false
+      fernetKeySecretName: airflow-fernet-key
+      webserverSecretKeySecretName: airflow-webserver-key
+      config:
+        webserver:
+          expose_config: 'True'
+          instance_name: CNDI
+          enable_proxy_fix: 'True'
+          base_url: 'https://airflow.three-azure-create.coolnowdemoit.com'
+        operators:
+          default_owner: CNDI
+      logs:
+        persistence:
+          enabled: true
+          size: 15Gi
+          storageClassName: rwm
+      createUserJob:
+        useHelmHooks: false
+        applyCustomEnv: false
+      migrateDatabaseJob:
+        jobAnnotations:
+          argocd.argoproj.io/hook: Sync
+        useHelmHooks: false
+        applyCustomEnv: false

@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reloader
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    name: reloader
+spec:
+  project: default
+  source:
+    repoURL: 'https://stakater.github.io/stakater-charts'
+    chart: reloader
+    helm:
+      version: v3
+      values: |
+        {}
+    targetRevision: 1.0.69
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: reloader
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Validate=false
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=false
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 4m

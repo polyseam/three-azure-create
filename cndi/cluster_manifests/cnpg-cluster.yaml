@@ -1,0 +1,26 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cnpg-airflow-cluster
+  namespace: airflow
+  annotations:
+    argocd.argoproj.io/sync-options: 'SkipDryRunOnMissingResource=true,PrunePropagationPolicy=background'
+spec:
+  imageName: 'ghcr.io/cloudnative-pg/postgresql:16'
+  instances: 3
+  storage:
+    size: 1Gi
+  replicationSlots:
+    highAvailability:
+      enabled: true
+  postgresql:
+    pg_hba:
+      - host airflow-db airflow all password
+  bootstrap:
+    initdb:
+      database: airflow-db
+      owner: airflow
+      secret:
+        name: cnpg-database-user-auth-secret
+  superuserSecret:
+    name: cnpg-cluster-superuser-auth-secret

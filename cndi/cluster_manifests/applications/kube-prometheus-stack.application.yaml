@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    name: kube-prometheus-stack
+spec:
+  project: default
+  source:
+    repoURL: 'https://prometheus-community.github.io/helm-charts'
+    chart: kube-prometheus-stack
+    helm:
+      version: v3
+      values: |
+        prometheusOperator:
+          admissionWebhooks:
+            annotations:
+              argocd.argoproj.io/hook: PreSync
+              argocd.argoproj.io/hook-delete-policy: HookSucceeded
+            mutatingWebhookConfiguration:
+              annotations:
+                argocd.argoproj.io/hook: PreSync
+            validatingWebhookConfiguration:
+              annotations:
+                argocd.argoproj.io/hook: PreSync
+            patch:
+              annotations:
+                argocd.argoproj.io/hook: PreSync
+                argocd.argoproj.io/hook-delete-policy: HookSucceeded
+        grafana:
+          additionalDataSources:
+            - name: Loki
+              type: loki
+              url: 'http://loki:3100'
+              access: proxy
+              isDefault: false
+              orgId: 1
+              jsonData:
+                maxLines: 1000
+    targetRevision: 67.4.0
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Validate=false
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=false
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 4m
