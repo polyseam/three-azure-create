@@ -21,7 +21,7 @@ spec:
         dags:
           gitSync:
             enabled: true
-            repo: 'https://github.com/johnstonmatt/three-azure-create'
+            repo: 'https://github.com/johnstonmatt/demo-dag-repo'
             credentialsSecret: airflow-git-credentials
             branch: main
             wait: 40
