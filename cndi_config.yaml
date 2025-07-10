@@ -5,6 +5,8 @@ provider: azure
 distribution: aks
 infrastructure:
   cndi:
+    functions:
+      hostname: functions.three-azure-create.coolnowdemoit.com
     external_dns:
       provider: azure
       values:
@@ -19,7 +21,7 @@ infrastructure:
         count: 3
     observability:
       grafana:
-        hostname: argocd.three-azure-create.coolnowdemoit.com
+        hostname: dashboards.three-azure-create.coolnowdemoit.com
     argocd:
       hostname: argocd.three-azure-create.coolnowdemoit.com
 cluster_manifests:
