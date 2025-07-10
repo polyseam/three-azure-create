@@ -21,7 +21,7 @@ spec:
         dags:
           gitSync:
             enabled: true
-            repo: 'https://github.com/johnstonmatt/demo-dag-repo'
+            repo: 'https://github.com/johnstonmatt/demo-dag-bag'
             credentialsSecret: airflow-git-credentials
             branch: main
             wait: 40
